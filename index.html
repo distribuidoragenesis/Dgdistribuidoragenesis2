@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Distribuidora Genesis 2</title>
+<title>DG Distribuidora Genesis 2</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
@@ -13,15 +13,17 @@ import { getDatabase, ref, onValue, set, push, update, remove, get }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyBFXv9NEu0ffBhxIB1TlR8sZyxiFTVMVcs",
-  authDomain: "distribuidoragenesis2-98291.firebaseapp.com",
-  databaseURL: "https://distribuidoragenesis2-98291-default-rtdb.firebaseio.com",
-  projectId: "distribuidoragenesis2-98291",
-  storageBucket: "distribuidoragenesis2-98291.firebasestorage.app",
-  messagingSenderId: "572631598494",
-  appId: "1:572631598494:web:c007fc3a3b56988b6a428f"
+  apiKey: "AIzaSyDFT8BgYaxdHyt4f8ae-rh3q09ZHqhHXeE",
+  authDomain: "dgdistribuidoragenesis2.firebaseapp.com",
+  databaseURL: "https://dgdistribuidoragenesis2-default-rtdb.firebaseio.com",
+  projectId: "dgdistribuidoragenesis2",
+  storageBucket: "dgdistribuidoragenesis2.firebasestorage.app",
+  messagingSenderId: "444503809368",
+  appId: "1:444503809368:web:ff9f95361ee9076aee192d"
 };
+const FB_CONFIGURED = !!FIREBASE_CONFIG;
 
+// ── Inicializar ────────────────────────────────────────────────
 let db = null;
 let fbReady = false;
 
@@ -34,6 +36,7 @@ function syncStatus(ok, label) {
 }
 
 try {
+  if (!FB_CONFIGURED) throw new Error("Firebase no configurado");
   const app = initializeApp(FIREBASE_CONFIG);
   db = getDatabase(app);
   fbReady = true;
@@ -43,22 +46,39 @@ try {
   syncStatus(false, "local");
 }
 
+// ── Exponer funciones al scope global ─────────────────────────
 window._fb = {
   ready: () => fbReady,
+
+  // Escucha cambios en tiempo real en productos
   watchProducts: (cb) => {
     if (!fbReady) return;
     onValue(ref(db, "products"), snap => {
       const data = snap.val();
-      cb(data ? Object.entries(data).map(([k, v]) => ({ _key: k, ...v })) : []);
+      if (data) {
+        const arr = Object.entries(data).map(([k, v]) => ({ _key: k, ...v }));
+        cb(arr);
+      } else {
+        cb([]);
+      }
     });
   },
+
+  // Escucha cambios en tiempo real en pedidos
   watchOrders: (cb) => {
     if (!fbReady) return;
     onValue(ref(db, "orders"), snap => {
       const data = snap.val();
-      cb(data ? Object.entries(data).map(([k, v]) => ({ _key: k, ...v })) : []);
+      if (data) {
+        const arr = Object.entries(data).map(([k, v]) => ({ _key: k, ...v }));
+        cb(arr);
+      } else {
+        cb([]);
+      }
     });
   },
+
+  // Escucha configuración de tienda
   watchSettings: (cb) => {
     if (!fbReady) return;
     onValue(ref(db, "settings"), snap => {
@@ -66,6 +86,8 @@ window._fb = {
       if (data) cb(data);
     });
   },
+
+  // Guardar todos los productos (reemplaza array completo)
   saveProducts: async (productsArr) => {
     if (!fbReady) return;
     const obj = {};
@@ -76,6 +98,8 @@ window._fb = {
     });
     await set(ref(db, "products"), obj);
   },
+
+  // Guardar un producto individual
   saveProduct: async (p) => {
     if (!fbReady) return;
     if (p._key) {
@@ -89,10 +113,14 @@ window._fb = {
       return newRef.key;
     }
   },
+
+  // Eliminar producto
   deleteProduct: async (key) => {
     if (!fbReady || !key) return;
     await remove(ref(db, "products/" + key));
   },
+
+  // Guardar pedido nuevo
   saveOrder: async (order) => {
     if (!fbReady) return null;
     const { _key, ...data } = order;
@@ -100,27 +128,39 @@ window._fb = {
     await set(newRef, data);
     return newRef.key;
   },
+
+  // Actualizar estado de pedido
   updateOrderStatus: async (key, status) => {
     if (!fbReady || !key) return;
     await update(ref(db, "orders/" + key), { status });
   },
+
+  // Guardar configuración
   saveSettings: async (settings) => {
     if (!fbReady) return;
     await set(ref(db, "settings"), settings);
   },
 };
 
+// ── Disparar init cuando Firebase esté listo ──────────────────
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("loadingOverlay").classList.add("show");
   if (fbReady) {
+    // Cargar datos iniciales desde Firebase antes de arrancar
     Promise.all([
       get(ref(db, "products")),
       get(ref(db, "orders")),
       get(ref(db, "settings"))
     ]).then(([pSnap, oSnap, sSnap]) => {
-      if (pSnap.val()) window._fbInitProducts = Object.entries(pSnap.val()).map(([k,v])=>({_key:k,...v}));
-      if (oSnap.val()) window._fbInitOrders = Object.entries(oSnap.val()).map(([k,v])=>({_key:k,...v}));
-      if (sSnap.val()) window._fbInitSettings = sSnap.val();
+      if (pSnap.val()) {
+        window._fbInitProducts = Object.entries(pSnap.val()).map(([k,v])=>({_key:k,...v}));
+      }
+      if (oSnap.val()) {
+        window._fbInitOrders = Object.entries(oSnap.val()).map(([k,v])=>({_key:k,...v}));
+      }
+      if (sSnap.val()) {
+        window._fbInitSettings = sSnap.val();
+      }
       setTimeout(() => window._appInit && window._appInit(), 100);
     }).catch(err => {
       console.warn("Error cargando Firebase, modo local:", err);
@@ -428,7 +468,7 @@ h1, h2, h3, h4, .section-title, .nav-logo { font-family: "Plus Jakarta Sans", sa
 <nav class="navbar">
   <div class="nav-logo">
     <img id="storeLogo" src="" alt="">
-    <span id="storeNameEl">DISTRIBUIDORA GENESIS 2</span>
+    <span id="storeNameEl">DG DISTRIBUIDORA GENESIS 2</span>
   </div>
   <div class="nav-links">
     <button class="nav-btn active" onclick="showPage('shop')">Tienda</button>
@@ -448,7 +488,7 @@ h1, h2, h3, h4, .section-title, .nav-logo { font-family: "Plus Jakarta Sans", sa
 
 <div class="page active" id="page-shop">
   <div class="hero">
-    <h1 id="heroTitle">Bienvenido a<br><span>DISTRIBUIDORA GENESIS 2</span></h1>
+    <h1 id="heroTitle">Bienvenido a<br><span>DG DISTRIBUIDORA GENESIS 2</span></h1>
     <p id="heroSubtitle">Los mejores productos al mejor precio</p>
   </div>
   <h2 class="section-title">Catálogo de Productos</h2>
@@ -708,7 +748,7 @@ h1, h2, h3, h4, .section-title, .nav-logo { font-family: "Plus Jakarta Sans", sa
   <div class="modal quote-modal">
     <div class="quote-header">
       <div style="font-size:3rem; margin-bottom: 0.5rem">📋</div>
-      <h3 id="quoteStoreName" style="margin:0 0 0.5rem; font-size:1.8rem;">DISTRIBUIDORA GENESIS 2</h3>
+      <h3 id="quoteStoreName" style="margin:0 0 0.5rem; font-size:1.8rem;">DG DISTRIBUIDORA GENESIS 2</h3>
       <div style="font-size:0.95rem;color:var(--text-muted);font-weight:500;" id="quoteDate"></div>
     </div>
     <div style="margin-bottom:1.5rem">
@@ -751,7 +791,7 @@ const GT_DATA = {"Guatemala": ["Guatemala", "Santa Catarina Pinula", "San José 
 let products=[], orders=[], cart=[];
 let editingId=null, loggedIn=false, currentPage=1;
 const PAGE_SIZE=24;
-let storeSettings={name:"DISTRIBUIDORA GENESIS 2",desc:"Los mejores productos al mejor precio",logo:"",waNumber:"",credentials:"distribuidora:genesis2024",mayoreoConfig:null,shippingZones:{},defaultShipping:25,freeShippingAt:300};
+let storeSettings={name:"DG DISTRIBUIDORA GENESIS 2",desc:"Los mejores productos al mejor precio",logo:"",waNumber:"",credentials:"distribuidora:genesis2024",mayoreoConfig:null,shippingZones:{},defaultShipping:25,freeShippingAt:300};
 let mayoreoMode=false, mayoreoTipo="";
 // Tipos de precio: publico y mayoristas (con sub-tipos)
 const PRECIO_TIPOS={
@@ -781,19 +821,19 @@ const getMayoreoDesc=()=>0;
 
 function localLoad(){
   // Compatibilidad — ahora init() maneja la carga
-  cart=JSON.parse(localStorage.getItem("gen2_cart")||"[]");
+  cart=JSON.parse(localStorage.getItem("gen_cart")||"[]");
 }
 function saveProducts(){
-  localStorage.setItem("gen2_products",JSON.stringify(products));
+  localStorage.setItem("gen_products",JSON.stringify(products));
   if(window._fb && window._fb.ready()) window._fb.saveProducts(products);
 }
 function saveOrders(){
-  localStorage.setItem("gen2_orders",JSON.stringify(orders));
+  localStorage.setItem("gen_orders",JSON.stringify(orders));
   // orders se guardan individualmente al crear
 }
-function saveCart(){localStorage.setItem("gen2_cart",JSON.stringify(cart))}
+function saveCart(){localStorage.setItem("gen_cart",JSON.stringify(cart))}
 function saveSettings(){
-  localStorage.setItem("gen2_settings",JSON.stringify(storeSettings));
+  localStorage.setItem("gen_settings",JSON.stringify(storeSettings));
   if(window._fb && window._fb.ready()) window._fb.saveSettings(storeSettings);
 }
 function nextId(){return products.length?Math.max(...products.map(p=>p.id))+1:1}
@@ -801,18 +841,18 @@ function nextOrderId(){return orders.length?Math.max(...orders.map(o=>o.id))+1:1
 
 function init(){
   // Cargar carrito local (siempre local por usuario)
-  cart=JSON.parse(localStorage.getItem("gen2_cart")||"[]");
+  cart=JSON.parse(localStorage.getItem("gen_cart")||"[]");
 
   // Si Firebase trajo datos iniciales, usarlos
   if(window._fbInitProducts) products = window._fbInitProducts;
-  else products=JSON.parse(localStorage.getItem("gen2_products")||"[]");
+  else products=JSON.parse(localStorage.getItem("gen_products")||"[]");
 
   if(window._fbInitOrders) orders = window._fbInitOrders;
-  else orders=JSON.parse(localStorage.getItem("gen2_orders")||"[]");
+  else orders=JSON.parse(localStorage.getItem("gen_orders")||"[]");
 
   if(window._fbInitSettings) Object.assign(storeSettings, window._fbInitSettings);
   else {
-    const saved=JSON.parse(localStorage.getItem("gen2_settings")||"null");
+    const saved=JSON.parse(localStorage.getItem("gen_settings")||"null");
     if(saved) Object.assign(storeSettings,saved);
   }
 
@@ -824,18 +864,18 @@ function init(){
   if(window._fb && window._fb.ready()){
     window._fb.watchProducts(arr=>{
       products=arr;
-      localStorage.setItem("gen2_products",JSON.stringify(arr));
+      localStorage.setItem("gen_products",JSON.stringify(arr));
       renderShop();
       if(loggedIn) renderAdminProducts();
     });
     window._fb.watchOrders(arr=>{
       orders=arr;
-      localStorage.setItem("gen2_orders",JSON.stringify(arr));
+      localStorage.setItem("gen_orders",JSON.stringify(arr));
       if(loggedIn) renderAdminOrders();
     });
     window._fb.watchSettings(s=>{
       Object.assign(storeSettings,s);
-      localStorage.setItem("gen2_settings",JSON.stringify(storeSettings));
+      localStorage.setItem("gen_settings",JSON.stringify(storeSettings));
       applyStoreSettings();
     });
   }
@@ -1131,7 +1171,7 @@ function placeOrder(){
   saveProducts();
   const order={id:nextOrderId(),date:new Date().toISOString(),status:"Pendiente",subtotal,shipping,total,customer:{name,contact,dept,mun,address,notes},items,mayoreoTipo:mayoreoTipo||null};
   orders.push(order);
-  localStorage.setItem("gen2_orders",JSON.stringify(orders));
+  localStorage.setItem("gen_orders",JSON.stringify(orders));
   if(window._fb && window._fb.ready()) window._fb.saveOrder(order);
   const wa=storeSettings.waNumber;
   if(wa){
@@ -1414,7 +1454,7 @@ function changeOrderStatus(id,status){
   const o=orders.find(x=>x.id===id);
   if(o){
     o.status=status;
-    localStorage.setItem("gen2_orders",JSON.stringify(orders));
+    localStorage.setItem("gen_orders",JSON.stringify(orders));
     if(window._fb && window._fb.ready() && o._key){
       window._fb.updateOrderStatus(o._key, status);
     }
@@ -1429,7 +1469,7 @@ function saveFbConfig(){
   var projectId=document.getElementById("fbProjectId").value.trim();
   if(!apiKey||!dbUrl||!projectId){toast("Completa los tres campos de Firebase","error");return;}
   var cfg={apiKey:apiKey,databaseURL:dbUrl,projectId:projectId,authDomain:projectId+".firebaseapp.com",storageBucket:projectId+".appspot.com"};
-  localStorage.setItem("lx_fb_config_genesis2",JSON.stringify(cfg));
+  localStorage.setItem("lx_fb_config_genesis",JSON.stringify(cfg));
   toast("Configuracion guardada. Recarga la pagina para conectar.","success");
   setTimeout(()=>location.reload(),2000);
 }
@@ -1437,7 +1477,7 @@ function saveFbConfig(){
 function updateFbStatusBadge(){
   var badge=document.getElementById("fbStatusBadge");
   if(!badge)return;
-  var cfg=localStorage.getItem("lx_fb_config_genesis2");
+  var cfg=localStorage.getItem("lx_fb_config_genesis");
   if(window._fb&&window._fb.ready()){
     badge.textContent="Conectado";
     badge.style.background="var(--green-soft)";
@@ -1458,7 +1498,7 @@ function updateFbStatusBadge(){
 }
 
 function saveStoreSettings(){
-  storeSettings.name=document.getElementById("settingName").value.trim()||"DISTRIBUIDORA GENESIS 2";
+  storeSettings.name=document.getElementById("settingName").value.trim()||"DG DISTRIBUIDORA GENESIS 2";
   storeSettings.desc=document.getElementById("settingDesc").value.trim();
   storeSettings.waNumber=document.getElementById("settingWA").value.trim();
   storeSettings.credentials=document.getElementById("settingCreds").value.trim()||"distribuidora:genesis2024";
@@ -1512,7 +1552,7 @@ function renderShippingZones(){
 
 function openQuote(){
   if(!cart.length){toast("El carrito está vacío","error");return;}
-  document.getElementById("quoteStoreName").textContent=storeSettings.name||"DISTRIBUIDORA GENESIS 2";
+  document.getElementById("quoteStoreName").textContent=storeSettings.name||"DG DISTRIBUIDORA GENESIS 2";
   document.getElementById("quoteDate").textContent=new Date().toLocaleDateString("es-GT",{year:"numeric",month:"long",day:"numeric"});
   const tipoLabel=PRECIO_TIPOS[mayoreoTipo||"publico"]?.label||"Público";
   const subtotal=cart.reduce((s,ci)=>{const p=products.find(x=>x.id===ci.id);return s+(p?getPrecioProducto(p)*ci.qty:0);},0);
@@ -1525,7 +1565,7 @@ function openQuote(){
 }
 function printQuote(){window.print();}
 function shareQuoteWhatsApp(){
-  const wa=storeSettings.waNumber, name=storeSettings.name||"DISTRIBUIDORA GENESIS 2";
+  const wa=storeSettings.waNumber, name=storeSettings.name||"DG DISTRIBUIDORA GENESIS 2";
   const tipoLabel=PRECIO_TIPOS[mayoreoTipo||"publico"]?.label||"Público";
   let msg="Cotización - "+name+"\n"+new Date().toLocaleDateString("es-GT")+"\nPrecios: "+tipoLabel+"\n";
   const client=document.getElementById("quoteClient").value; if(client) msg+="Cliente: "+client+"\n";
@@ -1548,7 +1588,7 @@ function exportInventoryCSV(){
   var blob=new Blob([csv],{type:"text/csv;charset=utf-8;"});
   var url=URL.createObjectURL(blob);
   var a=document.createElement("a");
-  a.href=url; a.download="inventario_genesis2.csv"; a.click();
+  a.href=url; a.download="inventario_genesis.csv"; a.click();
   URL.revokeObjectURL(url);
   toast("Inventario exportado","success");
 }
