@@ -401,6 +401,22 @@ h1, h2, h3, h4, .section-title, .nav-logo { font-family: "Plus Jakarta Sans", sa
 .checkout-item-row { display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid var(--border); font-weight: 500; }
 .checkout-item-row:last-child { border-bottom: none; }
 
+/* Payment Methods */
+.payment-section-title { font-size: 0.85rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin: 1.4rem 0 0.8rem; }
+.payment-options { display: flex; flex-direction: column; gap: 0.6rem; margin-bottom: 1rem; }
+.payment-option { display: flex; align-items: flex-start; gap: 0.9rem; padding: 0.9rem 1rem; border: 2px solid var(--border); border-radius: var(--radius-md); cursor: pointer; transition: all 0.2s; background: var(--surface); }
+.payment-option:hover { border-color: var(--accent); background: #f0f4ff; }
+.payment-option.selected { border-color: var(--accent); background: #eef2ff; box-shadow: 0 0 0 3px rgba(8,33,204,0.07); }
+.payment-option input[type="radio"] { margin-top: 2px; accent-color: var(--accent); width: 16px; height: 16px; flex-shrink: 0; cursor: pointer; }
+.payment-option-body { flex: 1; min-width: 0; }
+.payment-option-title { font-weight: 700; font-size: 0.97rem; color: var(--dark); line-height: 1.3; }
+.payment-option-info { font-size: 0.83rem; color: var(--text-muted); margin-top: 0.35rem; line-height: 1.5; white-space: pre-wrap; }
+.pm-admin-block { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1.2rem; margin-bottom: 1rem; }
+.pm-admin-block:last-child { margin-bottom: 0; }
+.pm-toggle-row { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 0.8rem; }
+.pm-toggle-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
+.pm-toggle-label { font-weight: 700; font-size: 1rem; color: var(--dark); cursor: pointer; }
+
 /* =========================================
    📱 OPTIMIZACIÓN MÓVIL (Smartphones)
 ========================================= */
@@ -629,7 +645,7 @@ h1, h2, h3, h4, .section-title, .nav-logo { font-family: "Plus Jakarta Sans", sa
     </div>
     <div class="table-wrap">
       <table class="admin-table">
-        <thead><tr><th>#</th><th>Fecha</th><th>Cliente</th><th>Depto/Mun</th><th>Total</th><th>Estado</th></tr></thead>
+        <thead><tr><th>#</th><th>Fecha</th><th>Cliente</th><th>Depto/Mun</th><th>Pago</th><th>Total</th><th>Estado</th></tr></thead>
         <tbody id="adminOrdersTbody"></tbody>
       </table>
     </div>
@@ -659,6 +675,34 @@ h1, h2, h3, h4, .section-title, .nav-logo { font-family: "Plus Jakarta Sans", sa
       <div class="form-group"><label>WhatsApp del negocio</label><input type="text" id="settingWA" placeholder="50299887766"></div>
       <div class="form-group"><label>Credenciales (usuario:contraseña)</label><input type="text" id="settingCreds" placeholder="admin:password123"></div>
       <button class="btn btn-save" onclick="saveStoreSettings()">Guardar Cambios</button>
+    </div>
+    <div class="settings-card">
+      <h4>💳 Métodos de Pago</h4>
+      <p style="font-size:0.9rem;color:var(--text-muted);margin-bottom:1.4rem">Activa los métodos que aceptas. Agrega los datos bancarios que verá el cliente al pagar.</p>
+      <div id="pmAdminContainer">
+        <div class="pm-admin-block">
+          <div class="pm-toggle-row">
+            <input type="checkbox" id="pmCodEnabled">
+            <label class="pm-toggle-label" for="pmCodEnabled">🚚 Pago Contra Entrega</label>
+          </div>
+          <div class="form-group" style="margin:0"><label>Instrucciones para el cliente (opcional)</label><textarea id="pmCodDesc" rows="2" placeholder="Ej: Paga cuando recibas tu pedido en efectivo."></textarea></div>
+        </div>
+        <div class="pm-admin-block">
+          <div class="pm-toggle-row">
+            <input type="checkbox" id="pmTransEnabled">
+            <label class="pm-toggle-label" for="pmTransEnabled">🏦 Transferencia Bancaria</label>
+          </div>
+          <div class="form-group" style="margin:0"><label>Datos bancarios (banco, no. de cuenta, nombre…)</label><textarea id="pmTransDesc" rows="4" placeholder="Banco Industrial&#10;Cuenta: 123-456789-0&#10;A nombre de: Distribuidora Genesis&#10;CUI: 1234567890101"></textarea></div>
+        </div>
+        <div class="pm-admin-block">
+          <div class="pm-toggle-row">
+            <input type="checkbox" id="pmDepEnabled">
+            <label class="pm-toggle-label" for="pmDepEnabled">💵 Depósito Bancario</label>
+          </div>
+          <div class="form-group" style="margin:0"><label>Datos para depósito (banco, no. de cuenta, nombre…)</label><textarea id="pmDepDesc" rows="4" placeholder="Banco Agromercantil&#10;Cuenta: 987-654321-0&#10;A nombre de: Distribuidora Genesis"></textarea></div>
+        </div>
+      </div>
+      <button class="btn btn-save" style="margin-top:1.2rem" onclick="savePaymentMethods()">💾 Guardar Métodos de Pago</button>
     </div>
     <div class="settings-card">
       <h4>🏪 Sistema de Precios por Producto</h4>
@@ -745,6 +789,8 @@ h1, h2, h3, h4, .section-title, .nav-logo { font-family: "Plus Jakarta Sans", sa
     <div class="form-group"><label>Dirección (opcional)</label><input type="text" id="buyerAddress" placeholder="Calle, colonia, referencia..."></div>
     <div class="form-group"><label>Notas (opcional)</label><textarea id="buyerNotes" placeholder="Instrucciones especiales..."></textarea></div>
     <div id="checkoutItemsDiv" class="checkout-items-summary"></div>
+    <p class="payment-section-title">💳 Método de Pago *</p>
+    <div class="payment-options" id="checkoutPaymentOptions"></div>
     <div id="shippingCostDisplay" style="font-size:0.95rem;font-weight:600;color:var(--text-muted);margin-bottom:0.8rem"></div>
     <div id="freeShippingBadge" style="display:none;background:var(--green-soft);color:#065f46;border-radius:var(--radius-sm);padding:0.8rem;font-size:0.95rem;font-weight:700;margin-bottom:1rem;text-align:center">¡Envío gratis en este pedido!</div>
     <div style="border-top:1px solid var(--border);margin:1.5rem 0 1rem;"></div>
@@ -781,6 +827,7 @@ h1, h2, h3, h4, .section-title, .nav-logo { font-family: "Plus Jakarta Sans", sa
       <div style="background:var(--bg);border-radius:var(--radius-md);padding:1.8rem;margin-bottom:1.8rem;border:2px dashed var(--border)">
         <p style="font-size:0.95rem;font-weight:600;color:var(--text-muted);margin-bottom:0.8rem;text-transform:uppercase;letter-spacing:1px;">Tu número de pedido</p>
         <p style="font-family:'Plus Jakarta Sans';font-size:3rem;font-weight:800;color:var(--accent);letter-spacing:1px" id="successOrderId">#000</p>
+        <p id="successPaymentMethod" style="margin-top:0.5rem;font-size:1rem;font-weight:600;color:var(--text-muted)"></p>
       </div>
       <button class="btn-save" style="width:100%;margin-bottom:1rem; padding:1.2rem; font-size:1.05rem;" onclick="goTrackOrder()">Rastrear mi Pedido</button>
       <button class="btn-cancel" style="width:100%; padding:1.2rem; font-size:1.05rem;" onclick="closeSuccess()">Seguir Comprando</button>
@@ -800,7 +847,7 @@ const GT_DATA = {"Guatemala": ["Guatemala", "Santa Catarina Pinula", "San José 
 let products=[], orders=[], cart=[];
 let editingId=null, loggedIn=false, currentPage=1;
 const PAGE_SIZE=24;
-let storeSettings={name:"DG DISTRIBUIDORA GENESIS 2",desc:"Los mejores productos al mejor precio",logo:"",waNumber:"",credentials:"distribuidora:genesis2024",mayoreoConfig:null,shippingZones:{},defaultShipping:25,freeShippingAt:300};
+let storeSettings={name:"DG DISTRIBUIDORA GENESIS 2",desc:"Los mejores productos al mejor precio",logo:"",waNumber:"",credentials:"distribuidora:genesis2024",mayoreoConfig:null,shippingZones:{},defaultShipping:25,freeShippingAt:300,paymentMethods:{cod:{enabled:true,label:"Pago Contra Entrega",icon:"🚚",desc:""},transfer:{enabled:false,label:"Transferencia Bancaria",icon:"🏦",desc:""},deposit:{enabled:false,label:"Depósito Bancario",icon:"💵",desc:""}}};
 let mayoreoMode=false, mayoreoTipo="";
 // Tipos de precio: publico y mayoristas (con sub-tipos)
 const PRECIO_TIPOS={
@@ -913,6 +960,7 @@ function applyStoreSettings(){
   if(si("defaultShippingCost"))si("defaultShippingCost").value=s.defaultShipping??25;
   if(si("freeShippingThreshold"))si("freeShippingThreshold").value=s.freeShippingAt??300;
   renderShippingZones();
+  loadPaymentMethodsAdmin();
 }
 
 function populateDeptSelects(){
@@ -1142,6 +1190,7 @@ function openCheckout(){
   populateDeptSelects();
   const div=document.getElementById("checkoutItemsDiv");
   div.innerHTML=cart.map(ci=>{const p=products.find(x=>x.id===ci.id);if(!p)return"";const pu=getPrecioProducto(p);return"<div class='checkout-item-row'><span>"+p.name+" <strong>x"+ci.qty+"</strong></span><span>Q"+(pu*ci.qty).toFixed(2)+"</span></div>";}).join("");
+  renderCheckoutPaymentOptions();
   updateCheckoutTotal();
   document.getElementById("checkoutModal").classList.add("open");
 }
@@ -1177,11 +1226,17 @@ function placeOrder(){
   const address=document.getElementById("buyerAddress").value.trim();
   const notes=document.getElementById("buyerNotes").value.trim();
   if(!name||!contact||!dept||!mun){toast("Completa todos los campos requeridos (*)","error");return;}
+  // Validar método de pago seleccionado
+  const pmRadio=document.querySelector('input[name="paymentMethod"]:checked');
+  if(!pmRadio){toast("Selecciona un método de pago","error");return;}
+  const pmKey=pmRadio.value;
+  const pm=storeSettings.paymentMethods||{};
+  const pmData=pm[pmKey]||{label:pmKey,icon:"💳"};
   const{subtotal,shipping,total}=updateCheckoutTotal();
   const items=cart.map(ci=>{const p=products.find(x=>x.id===ci.id);const pu=p?getPrecioProducto(p):0;return p?{id:p.id,name:p.name,price:pu,qty:ci.qty}:null;}).filter(Boolean);
   items.forEach(it=>{const p=products.find(x=>x.id===it.id);if(p)p.stock=Math.max(0,p.stock-it.qty);});
   saveProducts();
-  const order={id:nextOrderId(),date:new Date().toISOString(),status:"Pendiente",subtotal,shipping,total,customer:{name,contact,dept,mun,address,notes},items,mayoreoTipo:mayoreoTipo||null};
+  const order={id:nextOrderId(),date:new Date().toISOString(),status:"Pendiente",subtotal,shipping,total,payment:{key:pmKey,label:pmData.label,icon:pmData.icon||"💳"},customer:{name,contact,dept,mun,address,notes},items,mayoreoTipo:mayoreoTipo||null};
   orders.push(order);
   localStorage.setItem("lx_orders",JSON.stringify(orders));
   if(window._fb && window._fb.ready()) window._fb.saveOrder(order);
@@ -1190,6 +1245,7 @@ function placeOrder(){
     const tipoLabel=PRECIO_TIPOS[mayoreoTipo||"publico"]?.label||"Público";
     let msg="Nuevo Pedido #"+order.id+"\n"+name+" | "+contact+"\n"+dept+", "+mun+(address?" - "+address:"")+"\n";
     if(mayoreoMode&&mayoreoTipo&&mayoreoTipo!=="publico") msg+="Precio "+tipoLabel+"\n";
+    msg+="Método de pago: "+pmData.icon+" "+pmData.label+"\n";
     msg+="\nProductos:\n"; items.forEach(it=>{msg+="- "+it.name+" x"+it.qty+" = Q"+(it.price*it.qty).toFixed(2)+"\n";});
     msg+="\nSubtotal: Q"+subtotal.toFixed(2)+"\nEnvío: Q"+shipping.toFixed(2)+"\nTOTAL: Q"+total.toFixed(2);
     if(notes) msg+="\nNotas: "+notes;
@@ -1198,6 +1254,9 @@ function placeOrder(){
   cart=[]; saveCart(); updateCartCount();
   document.getElementById("checkoutModal").classList.remove("open");
   document.getElementById("successOrderId").textContent="#"+order.id;
+  // Mostrar método de pago en modal de éxito
+  const spEl=document.getElementById("successPaymentMethod");
+  if(spEl) spEl.textContent=(pmData.icon||"💳")+" "+pmData.label;
   document.getElementById("successModal").classList.add("open");
   renderShop();
 }
@@ -1455,12 +1514,15 @@ function renderAdminOrders(){
   }).reverse();
   document.getElementById("adminOrdersTbody").innerHTML=filtered.map(o=>{
     const d=new Date(o.date).toLocaleDateString("es-GT");
+    const pmLabel=o.payment?(o.payment.icon+" "+o.payment.label):"—";
     return "<tr><td>#"+o.id+"</td><td>"+d+"</td><td><strong>"+o.customer.name+"</strong><br><small>"+o.customer.contact+"</small></td>"+
-      "<td>"+o.customer.dept+"<br><small>"+o.customer.mun+"</small></td><td><strong>Q"+o.total.toFixed(2)+"</strong></td>"+
+      "<td>"+o.customer.dept+"<br><small>"+o.customer.mun+"</small></td>"+
+      "<td style='white-space:nowrap;font-size:0.87rem'>"+pmLabel+"</td>"+
+      "<td><strong>Q"+o.total.toFixed(2)+"</strong></td>"+
       "<td><select style='border:1px solid var(--border);border-radius:6px;padding:0.4rem;cursor:pointer;font-size:0.85rem;background:var(--surface);font-weight:600' onchange='changeOrderStatus("+o.id+",this.value)'>"+
         STEPS.map(s=>"<option"+(o.status===s?" selected":"")+">"+s+"</option>").join("")+
       "</select></td></tr>";
-  }).join()||"<tr><td colspan='6' style='text-align:center;color:var(--text-muted)'>Sin pedidos</td></tr>";
+  }).join()||"<tr><td colspan='7' style='text-align:center;color:var(--text-muted)'>Sin pedidos</td></tr>";
 }
 function changeOrderStatus(id,status){
   const o=orders.find(x=>x.id===id);
@@ -1696,6 +1758,64 @@ function parseCSVRow(line){
   return result;
 }
 
+
+
+// ── MÉTODOS DE PAGO ──────────────────────────────────────────────────────────
+
+function getPaymentMethods(){
+  const pm = storeSettings.paymentMethods;
+  if(!pm) return {cod:{enabled:true,label:"Pago Contra Entrega",icon:"🚚",desc:""},transfer:{enabled:false,label:"Transferencia Bancaria",icon:"🏦",desc:""},deposit:{enabled:false,label:"Depósito Bancario",icon:"💵",desc:""}};
+  return pm;
+}
+
+function renderCheckoutPaymentOptions(){
+  const cont = document.getElementById("checkoutPaymentOptions");
+  if(!cont) return;
+  const pm = getPaymentMethods();
+  const active = Object.entries(pm).filter(([,v])=>v.enabled);
+  if(!active.length){
+    cont.innerHTML = "<p style='color:var(--text-muted);font-size:0.9rem;padding:0.5rem 0'>Sin métodos de pago configurados. Contacta al negocio.</p>";
+    return;
+  }
+  cont.innerHTML = active.map(([key,m],i)=>{
+    const checked = i===0 ? "checked" : "";
+    const selClass = i===0 ? " selected" : "";
+    const infoHtml = m.desc ? "<div class='payment-option-info'>"+m.desc.replace(/</g,"&lt;")+"</div>" : "";
+    return "<label class='payment-option"+selClass+"' onclick='selectPaymentOption(this)'>"
+      +"<input type='radio' name='paymentMethod' value='"+key+"' "+checked+">"
+      +"<div class='payment-option-body'><div class='payment-option-title'>"+m.icon+" "+m.label+"</div>"+infoHtml+"</div>"
+      +"</label>";
+  }).join("");
+}
+
+function selectPaymentOption(label){
+  document.querySelectorAll(".payment-option").forEach(el=>el.classList.remove("selected"));
+  label.classList.add("selected");
+  const radio = label.querySelector("input[type=radio]");
+  if(radio) radio.checked = true;
+}
+
+function loadPaymentMethodsAdmin(){
+  const pm = getPaymentMethods();
+  const si = id=>document.getElementById(id);
+  if(si("pmCodEnabled"))   si("pmCodEnabled").checked   = pm.cod?.enabled   ?? true;
+  if(si("pmCodDesc"))      si("pmCodDesc").value         = pm.cod?.desc      || "";
+  if(si("pmTransEnabled")) si("pmTransEnabled").checked  = pm.transfer?.enabled ?? false;
+  if(si("pmTransDesc"))    si("pmTransDesc").value        = pm.transfer?.desc  || "";
+  if(si("pmDepEnabled"))   si("pmDepEnabled").checked    = pm.deposit?.enabled  ?? false;
+  if(si("pmDepDesc"))      si("pmDepDesc").value          = pm.deposit?.desc   || "";
+}
+
+function savePaymentMethods(){
+  const si = id=>document.getElementById(id);
+  storeSettings.paymentMethods = {
+    cod:      {enabled: si("pmCodEnabled")?.checked   || false, label:"Pago Contra Entrega",   icon:"🚚", desc: si("pmCodDesc")?.value.trim()   || ""},
+    transfer: {enabled: si("pmTransEnabled")?.checked || false, label:"Transferencia Bancaria", icon:"🏦", desc: si("pmTransDesc")?.value.trim() || ""},
+    deposit:  {enabled: si("pmDepEnabled")?.checked   || false, label:"Depósito Bancario",      icon:"💵", desc: si("pmDepDesc")?.value.trim()   || ""}
+  };
+  saveSettings();
+  toast("Métodos de pago guardados ✓","success");
+}
 
 let _toastTimer;
 function toast(msg,type){
