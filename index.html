@@ -163,6 +163,7 @@ document.addEventListener("DOMContentLoaded", () => {
     ]).then(([pSnap, oSnap, sSnap]) => {
       if (pSnap.val()) {
         window._fbInitProducts = Object.entries(pSnap.val()).map(([k,v])=>({_key:k,...v}));
+        window._fbInitProducts.sort(function(a,b){return (a.name||"").toLowerCase().localeCompare((b.name||"").toLowerCase(),"es");});
       }
       if (oSnap.val()) {
         window._fbInitOrders = Object.entries(oSnap.val()).map(([k,v])=>({_key:k,...v}));
@@ -922,6 +923,7 @@ function init(){
   // Escuchar cambios en tiempo real (para todos los visitantes)
   if(window._fb && window._fb.ready()){
     window._fb.watchProducts(arr=>{
+      arr.sort(function(a,b){return (a.name||"").toLowerCase().localeCompare((b.name||"").toLowerCase(),"es");});
       products=arr;
       localStorage.setItem("lx_products",JSON.stringify(arr));
       renderShop();
@@ -1383,7 +1385,7 @@ function saveInventoryUpdate(){
       else if(mode==="sub") p.stock=Math.max(0,p.stock-(isNaN(stock)?0:stock));
       toast("Producto actualizado","success");}
   }else{products.push({id:nextId(),sku:"",name,desc:"",price,stock:isNaN(stock)?0:stock,img:"",imgUrl:""});toast("Producto agregado","success");}
-  saveProducts(); renderAdminProducts(); populateInventorySelect(); renderShop();
+  sortProductsAZ(); saveProducts(); renderAdminProducts(); populateInventorySelect(); renderShop();
 }
 function openAddModal(){
   editingId=null; document.getElementById("modalTitle").textContent="Agregar Producto";
@@ -1447,6 +1449,12 @@ function previewPrecios(){
   if(fa>0) prev+="FARDO: Q"+fa.toFixed(2);
   document.getElementById("precioPreview").textContent=prev;
 }
+function sortProductsAZ(){
+  products.sort(function(a,b){
+    return (a.name||"").toLowerCase().localeCompare((b.name||"").toLowerCase(),"es");
+  });
+}
+
 function saveProduct(){
   const sku=document.getElementById("fSku").value.trim(), name=document.getElementById("fName").value.trim();
   const categoria=document.getElementById("fCat").value.trim();
@@ -1469,7 +1477,7 @@ function saveProduct(){
   const extras={precio_mayoristas,precio_media_docena,precio_docena,precio_fardo};
   if(editingId){const p=products.find(x=>x.id===editingId);if(p)Object.assign(p,{sku,name,desc,categoria,price,stock:isNaN(stock)?p.stock:stock,img,imgUrl,...extras});toast("Actualizado","success");}
   else{products.push({id:nextId(),sku,name,desc,categoria,price,stock:isNaN(stock)?0:stock,img,imgUrl,...extras});toast("Agregado","success");}
-  saveProducts(); closeModal(); renderAdminProducts(); populateInventorySelect(); renderShop();
+  sortProductsAZ(); saveProducts(); closeModal(); renderAdminProducts(); populateInventorySelect(); renderShop();
 }
 function deleteProduct(id){
   if(!confirm("¿Eliminar este producto?"))return;
@@ -1727,6 +1735,7 @@ function importInventoryCSV(e){
         }
       }
       // Guardar localmente primero
+      sortProductsAZ();
       localStorage.setItem("lx_products",JSON.stringify(products));
       // Luego subir a Firebase y esperar a que termine
       if(window._fb && window._fb.ready()){
