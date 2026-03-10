@@ -269,6 +269,10 @@ h1, h2, h3, h4, .section-title, .nav-logo { font-family: "Plus Jakarta Sans", sa
 .add-cart-btn:hover { background: var(--accent2); transform: scale(1.05); box-shadow: var(--shadow-glow); }
 .add-cart-btn:active { transform: scale(0.95); }
 .add-cart-btn:disabled { background: var(--border); color: var(--text-muted); cursor: not-allowed; transform: none; box-shadow: none; }
+.product-actions { display: flex; flex-direction: column; gap: 0.5rem; padding: 0 1.2rem 1.2rem; }
+.share-product-btn { background: transparent; color: var(--accent); border: 2px solid var(--accent); border-radius: var(--radius-sm); padding: 0.7rem 1.2rem; font-size: 0.9rem; font-weight: 600; cursor: pointer; width: 100%; text-align: center; transition: all 0.2s; font-family: "Inter"; }
+.share-product-btn:hover { background: rgba(8,33,204,0.07); transform: scale(1.03); }
+.share-product-btn:active { transform: scale(0.97); }
 
 /* Pagination */
 .pagination-bar { display: flex; gap: 0.5rem; justify-content: center; margin-top: 2.5rem; flex-wrap: wrap; }
@@ -453,6 +457,8 @@ h1, h2, h3, h4, .section-title, .nav-logo { font-family: "Plus Jakarta Sans", sa
   .product-footer { flex-direction: column; align-items: stretch; gap: 0.8rem; margin-top: 0.8rem; }
   .product-price { font-size: 1.15rem; }
   .add-cart-btn { padding: 0.7rem; font-size: 0.85rem; width: 100%; text-align: center; }
+  .product-actions { padding: 0 0.8rem 0.8rem; }
+  .share-product-btn { padding: 0.65rem; font-size: 0.82rem; }
 
   /* Carrito de Compras */
   .cart-container { gap: 1rem; }
@@ -1054,7 +1060,10 @@ function renderShop(){
             "<div class='product-price'>Q"+precio.toFixed(2)+"</div>"+
             "<div class='product-stock-label'>"+(avail?"Stock: "+p.stock:"Agotado")+"</div>"+
           "</div>"+
+        "</div>"+
+        "<div class='product-actions'>"+
           "<button class='add-cart-btn' onclick='addToCart("+p.id+")' "+(avail?"":"disabled")+">+ Agregar</button>"+
+          "<button class='share-product-btn' onclick='shareProduct("+p.id+")'>🔗 Compartir</button>"+
         "</div>"+
       "</div>"+
     "</div>";
@@ -1071,6 +1080,21 @@ function renderShop(){
   pBar.innerHTML=ph;
 }
 function goPage(n){currentPage=n;renderShop();window.scrollTo({top:0,behavior:"smooth"});}
+
+function shareProduct(id){
+  const p=products.find(x=>x.id===id); if(!p) return;
+  const storeName=storeSettings.name||"DG DISTRIBUIDORA GENESIS 2";
+  const precio=getPrecioProducto(p);
+  const text=storeName+"\n\n"+p.name+(p.sku?"\nCod: "+p.sku:"")+"\nPrecio: Q"+precio.toFixed(2)+(p.stock>0?"\nStock disponible":"\nAgotado");
+  if(navigator.share){
+    navigator.share({title:p.name,text:text,url:window.location.href}).catch(()=>{});
+  } else {
+    navigator.clipboard.writeText(text+"\n"+window.location.href).then(()=>{toast("Enlace copiado al portapapeles","success");}).catch(()=>{
+      const wa="https://wa.me/?text="+encodeURIComponent(text+"\n"+window.location.href);
+      window.open(wa,"_blank");
+    });
+  }
+}
 
 function addToCart(id){
   const p=products.find(x=>x.id===id); if(!p||p.stock<=0)return;
