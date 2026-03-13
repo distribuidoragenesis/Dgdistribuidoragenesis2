@@ -269,10 +269,6 @@ h1, h2, h3, h4, .section-title, .nav-logo { font-family: "Plus Jakarta Sans", sa
 .add-cart-btn:hover { background: var(--accent2); transform: scale(1.05); box-shadow: var(--shadow-glow); }
 .add-cart-btn:active { transform: scale(0.95); }
 .add-cart-btn:disabled { background: var(--border); color: var(--text-muted); cursor: not-allowed; transform: none; box-shadow: none; }
-.product-actions { display: flex; flex-direction: column; gap: 0.5rem; padding: 0 1.2rem 1.2rem; }
-.share-product-btn { background: transparent; color: var(--accent); border: 2px solid var(--accent); border-radius: var(--radius-sm); padding: 0.7rem 1.2rem; font-size: 0.9rem; font-weight: 600; cursor: pointer; width: 100%; text-align: center; transition: all 0.2s; font-family: "Inter"; }
-.share-product-btn:hover { background: rgba(8,33,204,0.07); transform: scale(1.03); }
-.share-product-btn:active { transform: scale(0.97); }
 
 /* Pagination */
 .pagination-bar { display: flex; gap: 0.5rem; justify-content: center; margin-top: 2.5rem; flex-wrap: wrap; }
@@ -457,8 +453,6 @@ h1, h2, h3, h4, .section-title, .nav-logo { font-family: "Plus Jakarta Sans", sa
   .product-footer { flex-direction: column; align-items: stretch; gap: 0.8rem; margin-top: 0.8rem; }
   .product-price { font-size: 1.15rem; }
   .add-cart-btn { padding: 0.7rem; font-size: 0.85rem; width: 100%; text-align: center; }
-  .product-actions { padding: 0 0.8rem 0.8rem; }
-  .share-product-btn { padding: 0.65rem; font-size: 0.82rem; }
 
   /* Carrito de Compras */
   .cart-container { gap: 1rem; }
@@ -1060,10 +1054,7 @@ function renderShop(){
             "<div class='product-price'>Q"+precio.toFixed(2)+"</div>"+
             "<div class='product-stock-label'>"+(avail?"Stock: "+p.stock:"Agotado")+"</div>"+
           "</div>"+
-        "</div>"+
-        "<div class='product-actions'>"+
           "<button class='add-cart-btn' onclick='addToCart("+p.id+")' "+(avail?"":"disabled")+">+ Agregar</button>"+
-          "<button class='share-product-btn' onclick='shareProduct("+p.id+")'>🔗 Compartir</button>"+
         "</div>"+
       "</div>"+
     "</div>";
@@ -1080,21 +1071,6 @@ function renderShop(){
   pBar.innerHTML=ph;
 }
 function goPage(n){currentPage=n;renderShop();window.scrollTo({top:0,behavior:"smooth"});}
-
-function shareProduct(id){
-  const p=products.find(x=>x.id===id); if(!p) return;
-  const storeName=storeSettings.name||"DG DISTRIBUIDORA GENESIS 2";
-  const precio=getPrecioProducto(p);
-  const text=storeName+"\n\n"+p.name+(p.sku?"\nCod: "+p.sku:"")+"\nPrecio: Q"+precio.toFixed(2)+(p.stock>0?"\nStock disponible":"\nAgotado");
-  if(navigator.share){
-    navigator.share({title:p.name,text:text,url:window.location.href}).catch(()=>{});
-  } else {
-    navigator.clipboard.writeText(text+"\n"+window.location.href).then(()=>{toast("Enlace copiado al portapapeles","success");}).catch(()=>{
-      const wa="https://wa.me/?text="+encodeURIComponent(text+"\n"+window.location.href);
-      window.open(wa,"_blank");
-    });
-  }
-}
 
 function addToCart(id){
   const p=products.find(x=>x.id===id); if(!p||p.stock<=0)return;
@@ -1662,23 +1638,50 @@ function openQuote(){
   if(!cart.length){toast("El carrito está vacío","error");return;}
   document.getElementById("quoteStoreName").textContent=storeSettings.name||"DG DISTRIBUIDORA GENESIS 2";
   document.getElementById("quoteDate").textContent=new Date().toLocaleDateString("es-GT",{year:"numeric",month:"long",day:"numeric"});
-  const tipoLabel=PRECIO_TIPOS[mayoreoTipo||"publico"]?.label||"Público";
+
+  // Determinar tipo de cliente y etiqueta de columna
+  const esMayorista=mayoreoMode&&mayoreoTipo&&mayoreoTipo!=="publico";
+  let colLabel, totalColor;
+  if(!esMayorista){
+    colLabel="P. Unit (Público)";
+    totalColor="#0821CC"; // azul
+  } else {
+    const subLabels={media_docena:"½ DOC",docena:"DOC",fardo:"FARDO"};
+    colLabel="P. Unit ("+( subLabels[mayoreoTipo]||mayoreoTipo)+")";
+    totalColor="#10b981"; // verde
+  }
+
   const subtotal=cart.reduce((s,ci)=>{const p=products.find(x=>x.id===ci.id);return s+(p?getPrecioProducto(p)*ci.qty:0);},0);
-  const totalPub=cart.reduce((s,ci)=>{const p=products.find(x=>x.id===ci.id);return s+(p?p.price*ci.qty:0);},0);
-  let rows=cart.map(ci=>{const p=products.find(x=>x.id===ci.id);if(!p)return"";const pu=getPrecioProducto(p);return"<tr><td>"+(p.sku||"—")+"</td><td>"+p.name+"</td><td>"+ci.qty+"</td><td>Q"+pu.toFixed(2)+"</td><td>Q"+(pu*ci.qty).toFixed(2)+"</td></tr>";}).join("");
-  let html="<table class='quote-table'><thead><tr><th>SKU</th><th>Producto</th><th>Cant.</th><th>P.Unit ("+tipoLabel+")</th><th>Subtotal</th></tr></thead><tbody>"+rows+"</tbody></table>";
-  html+="<table class='quote-table' style='margin-top:1rem'><tbody><tr class='quote-total-row'><td colspan='4' style='text-align:right'>TOTAL ("+tipoLabel+"):</td><td style='color:"+(mayoreoMode?"var(--orange)":"var(--accent)")+"'>Q"+subtotal.toFixed(2)+"</td></tr></tbody></table>";
+  let rows=cart.map(ci=>{
+    const p=products.find(x=>x.id===ci.id);if(!p)return"";
+    const pu=getPrecioProducto(p);
+    return"<tr><td>"+(p.sku||"—")+"</td><td>"+p.name+"</td><td>"+ci.qty+"</td><td>Q"+pu.toFixed(2)+"</td><td>Q"+(pu*ci.qty).toFixed(2)+"</td></tr>";
+  }).join("");
+
+  let html="<table class='quote-table'><thead><tr><th>SKU</th><th>Producto</th><th>Cant.</th><th>"+colLabel+"</th><th>Subtotal</th></tr></thead><tbody>"+rows+"</tbody></table>";
+  html+="<table class='quote-table' style='margin-top:1rem'><tbody><tr class='quote-total-row'><td colspan='4' style='text-align:right'>TOTAL:</td><td style='color:"+totalColor+";font-weight:800;'>Q"+subtotal.toFixed(2)+"</td></tr></tbody></table>";
   document.getElementById("quoteBody").innerHTML=html;
   document.getElementById("quoteModal").classList.add("open");
 }
 function printQuote(){window.print();}
 function shareQuoteWhatsApp(){
   const wa=storeSettings.waNumber, name=storeSettings.name||"DG DISTRIBUIDORA GENESIS 2";
-  const tipoLabel=PRECIO_TIPOS[mayoreoTipo||"publico"]?.label||"Público";
+
+  // Etiqueta del tipo de precio seleccionado
+  const esMayorista=mayoreoMode&&mayoreoTipo&&mayoreoTipo!=="publico";
+  const subLabels={media_docena:"½ DOC",docena:"DOC",fardo:"FARDO"};
+  const tipoLabel=esMayorista?(subLabels[mayoreoTipo]||mayoreoTipo):"Público";
+
   let msg="Cotización - "+name+"\n"+new Date().toLocaleDateString("es-GT")+"\nPrecios: "+tipoLabel+"\n";
   const client=document.getElementById("quoteClient").value; if(client) msg+="Cliente: "+client+"\n";
   msg+="\n";
-  cart.forEach(ci=>{const p=products.find(x=>x.id===ci.id);if(!p)return;const pu=getPrecioProducto(p);msg+="- "+p.name+" x"+ci.qty+" = Q"+(pu*ci.qty).toFixed(2)+"\n";});
+
+  cart.forEach(ci=>{
+    const p=products.find(x=>x.id===ci.id);if(!p)return;
+    const pu=getPrecioProducto(p);
+    msg+="- "+p.name+" x"+ci.qty+" = Q"+(pu*ci.qty).toFixed(2)+"\n";
+  });
+
   const total=cart.reduce((s,ci)=>{const p=products.find(x=>x.id===ci.id);return s+(p?getPrecioProducto(p)*ci.qty:0);},0);
   msg+="\nTOTAL: Q"+total.toFixed(2);
   window.open("https://wa.me/"+(wa||"")+"?text="+encodeURIComponent(msg),"_blank");
